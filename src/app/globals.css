@@ -12,12 +12,8 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
+/* This app's UI is designed as a single light theme (matches the mobile-first,
+   low-clutter brief) — intentionally not following the OS dark-mode preference. */
 
 body {
   background: var(--background);
