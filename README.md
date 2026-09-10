@@ -13,10 +13,11 @@ cp .env.local.example .env.local
 
 Fill in `.env.local`:
 
-- `NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME` / `NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET` —
-  create a free [Cloudinary](https://cloudinary.com) account, then an **unsigned**
-  upload preset (Settings → Upload → Upload presets → Add upload preset → Signing
-  mode: Unsigned). Without this, photos are skipped and only text data is sent.
+- `CLOUDINARY_URL` — from your [Cloudinary](https://cloudinary.com) dashboard
+  home page ("API Environment variable"), or build it yourself as
+  `cloudinary://<api_key>:<api_secret>@<cloud_name>`. Uploads are signed and
+  go through this app's own `/api/images/upload` route (Cloudinary Node SDK),
+  so the secret never reaches the browser.
 
 Then run:
 
@@ -35,8 +36,8 @@ Developers) — these are stored only in this browser's `localStorage`.
    the in-app "Download CSV template" button for a starting file.
 2. **Review** — fix any flagged rows inline before anything is sent.
 3. **Photos** — attach one or more photos per product from the camera or gallery.
-4. **Send** — images upload to Cloudinary first, then the batch is pushed to
-   Chowdeck.
+4. **Send** — images upload to Cloudinary (via `/api/images/upload`) first,
+   then the batch is pushed to Chowdeck.
    - **First-ever upload** for a merchant uses Chowdeck's `bulk-upload` endpoint,
      which is a full menu sync — the app shows an explicit warning before this,
      since it deactivates anything live that isn't in the batch.

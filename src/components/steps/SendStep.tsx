@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { isCloudinaryConfigured, uploadImageToCloudinary } from "@/lib/cloudinary";
+import { uploadImage } from "@/lib/cloudinary";
 import { buildChowdeckItem } from "@/lib/chowdeck";
 import { useBatchStore, useCredentialsStore } from "@/lib/store";
 import type { ChowdeckItem, ImageItem, UploadApiResponse } from "@/lib/types";
@@ -27,7 +27,6 @@ export function SendStep() {
     () => Object.values(images).reduce((sum, list) => sum + list.length, 0),
     [images]
   );
-  const cloudinaryReady = isCloudinaryConfigured();
 
   async function runUpload() {
     if (!credentials) return;
@@ -36,7 +35,7 @@ export function SendStep() {
     setImageProgress(0);
 
     try {
-      const uploadedImagesByRef = await uploadAllImages(images, updateImage, setImageProgress, cloudinaryReady);
+      const uploadedImagesByRef = await uploadAllImages(images, updateImage, setImageProgress);
 
       setPhase("sending");
       const items: ChowdeckItem[] = rows.map((row) => buildChowdeckItem(row, uploadedImagesByRef[row.reference] ?? []));
@@ -87,13 +86,6 @@ export function SendStep() {
           {totalImages === 1 ? "" : "s"}
         </p>
       </div>
-
-      {!cloudinaryReady && totalImages > 0 && (
-        <div className="rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-800">
-          Image hosting isn&apos;t configured yet, so photos will be skipped for this upload. See{" "}
-          <code>.env.local.example</code>.
-        </div>
-      )}
 
       {phase === "error" && errorMessage && (
         <div className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700">{errorMessage}</div>
@@ -164,13 +156,12 @@ export function SendStep() {
 async function uploadAllImages(
   images: Record<string, ImageItem[]>,
   updateImage: (reference: string, imageId: string, patch: Partial<ImageItem>) => void,
-  onOverallProgress: (percent: number) => void,
-  cloudinaryReady: boolean
+  onOverallProgress: (percent: number) => void
 ): Promise<Record<string, ImageItem[]>> {
   const entries = Object.entries(images);
   const allImages = entries.flatMap(([reference, list]) => list.map((img) => ({ reference, img })));
 
-  if (!cloudinaryReady || allImages.length === 0) {
+  if (allImages.length === 0) {
     onOverallProgress(100);
     return images;
   }
@@ -189,7 +180,7 @@ async function uploadAllImages(
     allImages.map(async ({ reference, img }) => {
       updateImage(reference, img.id, { status: "uploading" });
       try {
-        const url = await uploadImageToCloudinary(img.file, (pct) => {
+        const url = await uploadImage(img.file, (pct) => {
           progressByImageId.set(img.id, pct);
           reportOverall();
         });
