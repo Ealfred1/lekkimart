@@ -2,6 +2,8 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import type {
   Credentials,
+  GlovoCategory,
+  GlovoCredentials,
   ImageItem,
   ItemResult,
   ProductRow,
@@ -15,12 +17,18 @@ interface CredentialsState {
    * warning); every send after that uses per-item upserts so nothing already live
    * gets silently deactivated. */
   hasUploadedBefore: boolean;
+  /** Glovo credentials are separate and optional — the app works with either
+   * platform connected, or both. Glovo's catalog endpoint is always an upsert,
+   * so there's no equivalent "first send" danger/flag needed here. */
+  glovoCredentials: GlovoCredentials | null;
   /** True once localStorage has been read, so the UI doesn't flash the credentials
    * form before rehydration completes. */
   hasHydrated: boolean;
   setCredentials: (c: Credentials) => void;
   clearCredentials: () => void;
   markUploaded: () => void;
+  setGlovoCredentials: (c: GlovoCredentials) => void;
+  clearGlovoCredentials: () => void;
   setHasHydrated: () => void;
 }
 
@@ -29,10 +37,13 @@ export const useCredentialsStore = create<CredentialsState>()(
     (set) => ({
       credentials: null,
       hasUploadedBefore: false,
+      glovoCredentials: null,
       hasHydrated: false,
       setCredentials: (c) => set({ credentials: c }),
       clearCredentials: () => set({ credentials: null, hasUploadedBefore: false }),
       markUploaded: () => set({ hasUploadedBefore: true }),
+      setGlovoCredentials: (c) => set({ glovoCredentials: c }),
+      clearGlovoCredentials: () => set({ glovoCredentials: null }),
       setHasHydrated: () => set({ hasHydrated: true }),
     }),
     {
@@ -51,6 +62,14 @@ interface BatchState {
   results: ItemResult[] | null;
   lastSendWasFullBatch: boolean;
 
+  /** Glovo results are tracked separately since a batch can go to either or
+   * both platforms independently. */
+  glovoResults: ItemResult[] | null;
+  /** Categories fetched live from Glovo for the current credentials. */
+  glovoCategories: GlovoCategory[] | null;
+  /** Maps a CSV category name (as typed by the vendor) to a Glovo category UUID. */
+  categoryMap: Record<string, string>;
+
   setStep: (s: WizardStep) => void;
   setRows: (rows: ProductRow[]) => void;
   updateRow: (reference: string, patch: Partial<ProductRow>) => void;
@@ -58,6 +77,9 @@ interface BatchState {
   removeImage: (reference: string, imageId: string) => void;
   updateImage: (reference: string, imageId: string, patch: Partial<ImageItem>) => void;
   setResults: (results: ItemResult[], wasFullBatch: boolean) => void;
+  setGlovoResults: (results: ItemResult[]) => void;
+  setGlovoCategories: (categories: GlovoCategory[]) => void;
+  setCategoryMapping: (categoryName: string, glovoCategoryId: string) => void;
   reset: () => void;
 }
 
@@ -67,6 +89,9 @@ export const useBatchStore = create<BatchState>((set) => ({
   images: {},
   results: null,
   lastSendWasFullBatch: false,
+  glovoResults: null,
+  glovoCategories: null,
+  categoryMap: {},
 
   setStep: (step) => set({ step }),
 
@@ -105,5 +130,13 @@ export const useBatchStore = create<BatchState>((set) => ({
 
   setResults: (results, wasFullBatch) => set({ results, lastSendWasFullBatch: wasFullBatch }),
 
-  reset: () => set({ step: "csv", rows: [], images: {}, results: null }),
+  setGlovoResults: (glovoResults) => set({ glovoResults }),
+
+  setGlovoCategories: (glovoCategories) => set({ glovoCategories }),
+
+  setCategoryMapping: (categoryName, glovoCategoryId) =>
+    set((state) => ({ categoryMap: { ...state.categoryMap, [categoryName]: glovoCategoryId } })),
+
+  reset: () =>
+    set({ step: "csv", rows: [], images: {}, results: null, glovoResults: null, categoryMap: {} }),
 }));

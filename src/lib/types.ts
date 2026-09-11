@@ -40,6 +40,24 @@ export interface Credentials {
   secretKey: string;
 }
 
+/** From Glovo's Partner Portal — unlike Chowdeck's single dashboard key, Glovo
+ * scopes a partner as a "chain" containing one or more "vendors" (stores), and
+ * auth is OAuth2 client-credentials rather than a static bearer token. */
+export interface GlovoCredentials {
+  clientId: string;
+  clientSecret: string;
+  chainId: string;
+  vendorId: string;
+}
+
+/** A category as it actually exists on Glovo — the catalog API requires an
+ * existing category UUID per item; it won't create one from a free-text name
+ * the way Chowdeck does. */
+export interface GlovoCategory {
+  id: string;
+  name: string;
+}
+
 export type WizardStep = "csv" | "review" | "photos" | "send" | "results";
 
 export interface ChowdeckCategory {
@@ -59,6 +77,19 @@ export interface ChowdeckItem {
   price: number; // kobo
   in_stock: boolean;
   images: ChowdeckImage[];
+}
+
+export interface GlovoCatalogItem {
+  sku: string;
+  title: Record<string, string>; // { [locale]: text } — e.g. { en: "Jollof Rice" }
+  description?: Record<string, string>;
+  images: string[];
+  categories: string[]; // Glovo category UUIDs
+  /** ASSUMPTION, unverified against a real Glovo sandbox: major currency units
+   * (e.g. Naira), matching what the vendor typed — not confirmed anywhere in
+   * Glovo's public docs. Check this against a real response before relying on it. */
+  price: number;
+  active: boolean;
 }
 
 export interface ItemResult {
